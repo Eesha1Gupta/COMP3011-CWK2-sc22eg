@@ -113,7 +113,7 @@ class Indexer:
 
         for url, html in pages.items():
             self._index_page(url, html)
-
+        self.compute_tf_idf()
         logger.info("Index built: %d terms across %d documents.", len(self.index), self.num_docs)
 
     def _index_page(self, url: str, html: str) -> None:
@@ -147,6 +147,26 @@ class Indexer:
             posting["positions"].append(position)
 
 
+    # ------------------------------------------------------------------
+    # TF-IDF scoring 
+    # ------------------------------------------------------------------
+
+    def compute_tf_idf(self) -> None:
+        """
+        Compute TF-IDF scores for every (term, document) pair.
+
+        TF  = term_freq / doc_length   (normalised term frequency)
+        IDF = log(N / doc_freq)        (inverse document frequency)
+        TF-IDF = TF * IDF
+        """
+        if self.num_docs == 0:
+            return
+
+        for word, entry in self.index.items():
+            idf = math.log(self.num_docs / entry["doc_freq"])
+            for url, posting in entry["postings"].items():
+                tf = posting["term_freq"] / max(self.doc_lengths.get(url, 1), 1)
+                posting["tf_idf"] = round(tf * idf, 6)
 
     # ------------------------------------------------------------------
     # Query helpers
